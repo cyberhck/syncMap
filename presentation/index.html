@@ -24,6 +24,7 @@
 			if(window.flag==0){
 				socket.emit('pan',data);
 			}
+			window.flag=0;
 		});
 		google.maps.event.addListener(map, 'zoom_changed', function(e){
 			if(window.flag1==0){
