@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Synced Views</title>
+	<script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAS5LrUlLF8z9MCloKLK_I2uyaw81-vynY"></script>
+	<link rel="stylesheet" href="bootstrap.min.css">
+	<script>
+	window.flag=0;
+	window.flag1=0;
+	function initialize () {
+		var mapOptions = {
+          center: { lat: 13.043331366666669, lng: 77.59817653333334},
+          zoom: 12
+        };
+        map = new google.maps.Map(document.getElementById('map-canvas'),mapOptions);
+
+		google.maps.event.addListener(map, 'center_changed', function(e){
+			latLng=map.getCenter();
+			lat=latLng.D;
+			lon=latLng.k;
+			data=lat+":"+lon
+			
+			if(window.flag==0){
+				socket.emit('pan',data);
+			}
+		});
+		google.maps.event.addListener(map, 'zoom_changed', function(e){
+			if(window.flag1==0){
+				socket.emit('zoom',map.getZoom());
+				console.log(map.getZoom());
+			}
+		});
+
+		google.maps.event.addListener(map, 'click', function(e) {
+		    console.log(e.latLng.k);
+		    data=e.latLng.k+":"+e.latLng.D
+		    lat=e.latLng.k;
+		    lon=e.latLng.D;
+		    latLng=new google.maps.LatLng(lat,lon)
+
+			var marker = new google.maps.Marker({
+				position: latLng,
+				map: map,
+				title: 'Marker!'
+			});
+			socket.emit("click",data);
+	});
+
+	}
+	google.maps.event.addDomListener(window, 'load', initialize);
+
+	</script>
+	<style>
+		html, body, #map-canvas { height: 600px; margin: 0; padding: 0;}
+	</style>
+	<script src="/socket.io/socket.io.js"></script>
+	<script>
+	socket=io();
+	socket.on('message',function(data){
+		console.log(data);
+		document.getElementById("chat").innerHTML=document.getElementById("chat").innerHTML+"<font color='green'>"+data+"</font><br>";
+	});
+	socket.on('pan',function(data){
+		//center map to data
+		data=data.split(":");
+		lat=data[0];
+		lon=data[1];
+		latLng=new google.maps.LatLng(lon,lat);
+		if(window.flag==1){
+			map.setCenter(latLng);
+		}
+		window.flag=1;
+	});
+	socket.on('zoom',function(data){
+		//set the zoom level to data
+		if(window.flag1==1){
+			map.setZoom(data);
+			console.log(data);
+		}
+		window.flag1=1;
+	});
+	socket.on('click',function(data){
+		console.log(data);
+		var directionsService = new google.maps.DirectionsService();
+		var directionsDisplay = new google.maps.DirectionsRenderer();
+		map.directionsDisplay=directionsDisplay;
+		map.directionsDisplay.setMap(null);
+		//clear any markers on map then place a new marker.
+		data=data.split(":");
+		lat=data[0];
+		lon=data[1];
+
+		latLng=new google.maps.LatLng(lat,lon)
+
+		var marker = new google.maps.Marker({
+			position: latLng,
+			map: map,
+			title: 'Marker!'
+		});
+	});
+
+
+
+	function abc(){
+		value1=document.getElementById('message').value;
+		socket.emit('message',value1);
+		document.getElementById("chat").innerHTML=document.getElementById("chat").innerHTML+"<font color='red'>"+value1+"</font><br>";
+		document.getElementById('message').value="";
+		return false;
+	}
+	</script>
+	<style>
+		
+	</style>
+</head>
+<body>
+	<div class="row">
+		<div id="map-canvas" class="col-md-6"></div>
+		<div class="col-md-4"><div id="chat"></div><form onsubmit="return abc()"><input id="message" placeholder="Message..." type="text"> <input type="submit"></div>
+	</div>
+</body>
+</html>
